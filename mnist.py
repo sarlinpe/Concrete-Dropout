@@ -70,23 +70,22 @@ def main(_):
         for i in range(40000):
             batch = mnist.train.next_batch(50)
             if i % 500 == 0:
-                ret = sess.run([loss, accuracy]+dropout_rates,
-                               feed_dict={x: batch[0],
-                                          y: batch[1],
-                                          is_training: False})
-                training_loss, training_acc = ret[:2]
+                training_loss, training_acc, rates = sess.run(
+                        [loss, accuracy, dropout_rates],
+                        feed_dict={
+                            x: batch[0], y: batch[1], is_training: False})
                 print('step {}, loss {}, accuracy {}'.format(
                     i, training_loss, training_acc))
-                print('dropout rates: {}'.format(rates_pretty_print(ret[2:])))
+                print('dropout rates: {}'.format(rates_pretty_print(rates)))
             train_step.run(feed_dict={
                 x: batch[0], y: batch[1], is_training: True})
 
-        ret = sess.run([accuracy]+dropout_rates,
-                       feed_dict={x: mnist.test.images,
-                                  y: mnist.test.labels,
-                                  is_training: False})
-        print('test accuracy {}'.format(ret[0]))
-        print('final dropout rates: {}'.format(rates_pretty_print(ret[1:])))
+        accuracy, rates = sess.run([accuracy, dropout_rates],
+                                   feed_dict={x: mnist.test.images,
+                                              y: mnist.test.labels,
+                                              is_training: False})
+        print('test accuracy {}'.format(accuracy))
+        print('final dropout rates: {}'.format(rates_pretty_print(rates)))
 
 
 if __name__ == '__main__':
