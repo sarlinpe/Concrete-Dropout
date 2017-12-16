@@ -54,14 +54,25 @@ class ConcreteDropout(base.Layer):
         self.init_min = (np.log(init_min) - np.log(1. - init_min))
         self.init_max = (np.log(init_max) - np.log(1. - init_max))
         self.training = training
+        self.reuse = reuse
 
     def get_kernel_regularizer(self):
         def kernel_regularizer(weight):
-            if not self.training:
+            if self.reuse:
                 return None
             return self.weight_regularizer * tf.reduce_sum(tf.square(weight)) \
                 / (1. - self.p)
         return kernel_regularizer
+
+    def apply_dropout_regularizer(self, inputs):
+        with tf.name_scope('dropout_regularizer'):
+            input_dim = tf.cast(tf.reduce_prod(tf.shape(inputs)[1:]),
+                                dtype=tf.float32)
+            dropout_regularizer = self.p * tf.log(self.p)
+            dropout_regularizer += (1. - self.p) * tf.log(1. - self.p)
+            dropout_regularizer *= self.dropout_regularizer * input_dim
+            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES,
+                                 dropout_regularizer)
 
     def build(self, input_shape):
         input_shape = tensor_shape.TensorShape(input_shape)
@@ -84,16 +95,6 @@ class ConcreteDropout(base.Layer):
         eps = 1e-7
         temp = 0.1
 
-        if self.training:
-            with tf.name_scope('dropout_regularizer'):
-                input_dim = tf.cast(tf.reduce_prod(tf.shape(x)[1:]),
-                                    dtype=tf.float32)
-                dropout_regularizer = self.p * tf.log(self.p)
-                dropout_regularizer += (1. - self.p) * tf.log(1. - self.p)
-                dropout_regularizer *= self.dropout_regularizer * input_dim
-                tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES,
-                                     dropout_regularizer)
-
         with tf.name_scope('dropout_mask'):
             unif_noise = tf.random_uniform(shape=tf.shape(x))
             drop_prob = (
@@ -115,6 +116,8 @@ class ConcreteDropout(base.Layer):
     def call(self, inputs, training=True):
         def dropped_inputs():
             return self.concrete_dropout(inputs)
+        if not self.reuse:
+            self.apply_dropout_regularizer(inputs)
         return utils.smart_cond(training,
                                 dropped_inputs,
                                 lambda: array_ops.identity(inputs))
