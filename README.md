@@ -14,19 +14,20 @@ from tensorflow import layers as tfl
 ...
 
 dropped, reg = concrete_dropout(
-	inputs,
-	weight_regularizer=wr,
-	dropout_regularizer=dr,
-	init_min=init_rate,
-	init_max=init_rate,
-	name='concrete_dropout',
-	training=training)
+    inputs,
+    weight_regularizer=wr,
+    dropout_regularizer=dr,
+    init_min=init_rate,
+    init_max=init_rate,
+    name='concrete_dropout',
+    training=training)
 outputs = tfl.conv2d(
-	dropped,
-	filters,
-	kernel_size,
-	kernel_regularizer=reg,
-	name='conv')
+    dropped,
+    filters,
+    kernel_size,
+    kernel_regularizer=reg,
+    bias_regularizer=reg,
+    name='conv')
 ```
 
 Don't forget to add the regularisers to your loss when you're done with building the graph:
@@ -40,7 +41,7 @@ Finally, you can obtain the summaries for the learned rates with:
 ```python
 rates = tf.get_collection('DROPOUT_RATES')
 for r in rates:
-	tf.summary.scalar(r.name, r)
+    tf.summary.scalar(r.name, r)
 ```
 
 
